@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waggo — code be freely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-app:#1b1e24; --bg-panel:#22262e; --bg-panel-alt:#282c35; --bg-input:#1c2027;
+    --border:#33383f; --text:#dfe3ea; --text-muted:#838b98; --accent:#4fb2e8;
+    --accent-contrast:#0b0f14; --danger:#e0665a; --success:#4caf7d;
+    --ui-font:'Inter',system-ui,-apple-system,sans-serif;
+    --mono-font:'JetBrains Mono',Consolas,Menlo,monospace;
+  }
+  [data-theme="waggo-light"]{
+    --bg-app:#eef0f3; --bg-panel:#ffffff; --bg-panel-alt:#e7e9ed; --bg-input:#ffffff;
+    --border:#d5d9de; --text:#20242b; --text-muted:#6b7280; --accent:#256fb8;
+    --accent-contrast:#ffffff; --danger:#c0392b; --success:#2e8b57;
+  }
+  [data-theme="waggo-contrast"]{
+    --bg-app:#000000; --bg-panel:#050505; --bg-panel-alt:#0e0e0e; --bg-input:#000000;
+    --border:#4d4d4d; --text:#ffffff; --text-muted:#c7c7c7; --accent:#ffcc00;
+    --accent-contrast:#000000; --danger:#ff5555; --success:#55ff9a;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:var(--ui-font);
+    background:var(--bg-app);
+    color:var(--text);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--accent);color:var(--accent-contrast);}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:var(--bg-panel);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+  button{font-family:inherit;}
+
+  /* ---------- SPLASH ---------- */
+  #splash{
+    position:fixed;inset:0;background:#0e1116;color:#e7ebf1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:9999;transition:opacity .5s ease;
+  }
+  #splash pre{
+    font-family:var(--mono-font);color:#4fb2e8;font-size:15px;line-height:1.25;
+    margin:0 0 22px 0;text-shadow:0 0 22px rgba(79,178,232,.35);
+    letter-spacing:1px;
+  }
+  #splash .status-line{
+    font-family:var(--mono-font);font-size:12.5px;color:#7d8797;
+    min-height:16px;letter-spacing:.4px;
+  }
+  #splash .bar{
+    width:220px;height:2px;background:#232833;margin-top:14px;border-radius:2px;overflow:hidden;
+  }
+  #splash .bar-fill{
+    height:100%;width:0%;background:linear-gradient(90deg,#4fb2e8,#7de0c8);
+    transition:width .35s ease;
+  }
+  #splash.hide{opacity:0;pointer-events:none;}
+
+  /* ---------- APP SHELL ---------- */
+  #app{height:100%;display:none;flex-direction:column;}
+  #app.show{display:flex;}
+
+  .titlebar{
+    height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;
+    background:var(--bg-panel-alt);border-bottom:1px solid var(--border);
+    font-size:12.5px;color:var(--text-muted);flex:none;
+  }
+  .titlebar .brand{color:var(--accent);font-weight:700;font-family:var(--mono-font);letter-spacing:.5px;}
+  .titlebar .sep{opacity:.4}
+  .titlebar .doc-name{color:var(--text);}
+  .titlebar .dirty-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:none;}
+  .titlebar .dirty-dot.on{display:inline-block;}
+
+  .menubar{
+    display:flex;align-items:stretch;background:var(--bg-panel);
+    border-bottom:1px solid var(--border);flex:none;position:relative;user-select:none;
+  }
+  .menu{position:relative;}
+  .menu>button{
+    background:transparent;border:none;color:var(--text);padding:7px 12px;
+    font-size:12.5px;cursor:pointer;border-radius:0;
+  }
+  .menu>button:hover, .menu.open>button{background:var(--bg-panel-alt);color:var(--accent);}
+  .menu-drop{
+    position:absolute;top:100%;left:0;min-width:250px;background:var(--bg-panel);
+    border:1px solid var(--border);box-shadow:0 12px 28px rgba(0,0,0,.35);
+    display:none;flex-direction:column;padding:5px;z-index:500;border-radius:4px;
+  }
+  .menu.open .menu-drop{display:flex;}
+  .menu-item{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:6px 9px;border-radius:3px;font-size:12.5px;color:var(--text);cursor:pointer;background:transparent;border:none;text-align:left;
+  }
+  .menu-item:hover{background:var(--accent);color:var(--accent-contrast);}
+  .menu-item .kbd{font-family:var(--mono-font);font-size:10.5px;color:var(--text-muted);}
+  .menu-item:hover .kbd{color:var(--accent-contrast);opacity:.75;}
+  .menu-divider{height:1px;background:var(--border);margin:5px 3px;}
+
+  .toolbar{
+    display:flex;align-items:center;gap:8px;padding:7px 10px;
+    background:var(--bg-panel);border-bottom:1px solid var(--border);flex:none;
+  }
+  .tb-select, .tb-btn{
+    background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+    font-size:12px;padding:5px 8px;border-radius:4px;cursor:pointer;
+  }
+  .tb-select:focus, .tb-btn:focus{outline:1px solid var(--accent);}
+  .tb-btn{display:flex;align-items:center;gap:6px;}
+  .tb-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .tb-btn.primary{background:var(--success);border-color:var(--success);color:#08120c;font-weight:600;}
+  .tb-btn.primary:hover{filter:brightness(1.08);color:#08120c;}
+  .tb-btn.active{border-color:var(--accent);color:var(--accent);}
+  .tb-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .tb-btn:disabled:hover{border-color:var(--border);color:var(--text);}
+  .tb-spacer{flex:1;}
+  .tb-search{
+    display:flex;align-items:center;gap:8px;background:var(--bg-input);
+    border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text-muted);
+    font-size:12px;cursor:pointer;min-width:190px;
+  }
+  .tb-search:hover{border-color:var(--accent);}
+  .tb-search .kbd-chip{margin-left:auto;font-family:var(--mono-font);font-size:10px;
+    background:var(--bg-panel-alt);border:1px solid var(--border);padding:1px 5px;border-radius:3px;}
+
+  /* ---------- BODY AREA ---------- */
+  .body-area{flex:1;display:flex;min-height:0;}
+  .sidebar{
+    width:210px;flex:none;background:var(--bg-panel);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;transition:width .15s ease;overflow:hidden;
+  }
+  .sidebar.collapsed{width:0;border-right:none;}
+  .sidebar-head{
+    display:flex;align-items:center;justify-content:space-between;padding:9px 10px 6px 10px;
+    font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);
+  }
+  .sidebar-head button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1;padding:2px 5px;border-radius:3px;}
+  .sidebar-head button:hover{color:var(--accent);background:var(--bg-panel-alt);}
+  .doc-list{list-style:none;margin:0;padding:0 6px;overflow-y:auto;}
+  .doc-item{
+    display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:4px;cursor:pointer;
+    font-size:12.5px;color:var(--text-muted);margin-bottom:1px;
+  }
+  .doc-item .fdot{width:7px;height:7px;border-radius:2px;background:var(--text-muted);flex:none;}
+  .doc-item span.name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .doc-item .close-x{opacity:0;font-size:13px;padding:0 3px;border-radius:3px;}
+  .doc-item:hover .close-x{opacity:.7;}
+  .doc-item .close-x:hover{opacity:1;background:var(--danger);color:#fff;}
+  .doc-item:hover{background:var(--bg-panel-alt);color:var(--text);}
+  .doc-item.active{background:var(--bg-panel-alt);color:var(--text);}
+  .doc-item.active .fdot{background:var(--accent);}
+
+  .editor-preview-wrap{flex:1;display:flex;min-width:0;position:relative;}
+  .editor-wrap{flex:1;min-width:0;position:relative;}
+  #monaco-container{position:absolute;inset:0;}
+  .watermark{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    pointer-events:none;opacity:.28;z-index:5;
+  }
+  .watermark pre{
+    font-family:var(--mono-font);color:var(--text-muted);font-size:13px;line-height:1.25;margin:0;
+  }
+  .watermark .tag{margin-top:10px;font-family:var(--mono-font);font-size:11px;letter-spacing:1px;color:var(--text-muted);}
+  .watermark.hidden{display:none;}
+
+  .preview-wrap{
+    width:45%;flex:none;border-left:1px solid var(--border);display:none;flex-direction:column;background:#fff;
+  }
+  .preview-wrap.show{display:flex;}
+  .preview-bar{
+    height:30px;flex:none;background:var(--bg-panel-alt);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:11px;color:var(--text-muted);
+  }
+  .preview-bar button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;}
+  .preview-bar button:hover{color:var(--accent);}
+  .preview-wrap iframe{flex:1;border:none;width:100%;background:#fff;}
+
+  /* ---------- STATUS BAR ---------- */
+  .statusbar{
+    height:24px;flex:none;background:var(--accent);color:var(--accent-contrast);
+    display:flex;align-items:center;gap:16px;padding:0 12px;font-size:11.5px;font-family:var(--mono-font);
+  }
+  [data-theme="waggo-contrast"] .statusbar{color:#000;}
+  .statusbar .grow{flex:1;}
+  .statusbar span{opacity:.92;}
+  .statusbar .hint{opacity:.75;font-family:var(--ui-font);}
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,6,9,.55);display:none;align-items:flex-start;
+    justify-content:center;z-index:2000;padding-top:11vh;
+  }
+  .overlay.show{display:flex;}
+
+  .palette{
+    width:560px;max-width:92vw;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;
+  }
+  .palette input{
+    width:100%;background:var(--bg-input);border:none;border-bottom:1px solid var(--border);
+    color:var(--text);font-size:14.5px;padding:13px 16px;outline:none;font-family:var(--ui-font);
+  }
+  .palette-list{max-height:360px;overflow-y:auto;padding:6px;}
+  .palette-item{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 10px;
+    border-radius:5px;cursor:pointer;font-size:13px;color:var(--text);
+  }
+  .palette-item .cat{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:8px;}
+  .palette-item .kbd{font-family:var(--mono-font);font-size:10.5px;color:var(--text-muted);white-space:nowrap;}
+  .palette-item.sel{background:var(--accent);color:var(--accent-contrast);}
+  .palette-item.sel .cat, .palette-item.sel .kbd{color:var(--accent-contrast);opacity:.8;}
+  .palette-empty{padding:20px;text-align:center;color:var(--text-muted);font-size:12.5px;}
+
+  .modal{
+    width:720px;max-width:94vw;height:78vh;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;overflow:hidden;
+  }
+  .modal-nav{width:170px;flex:none;background:var(--bg-panel-alt);border-right:1px solid var(--border);padding:10px 0;}
+  .modal-nav button{
+    display:block;width:100%;text-align:left;background:none;border:none;color:var(--text-muted);
+    padding:9px 16px;font-size:12.5px;cursor:pointer;
+  }
+  .modal-nav button:hover{color:var(--text);}
+  .modal-nav button.active{color:var(--accent);background:var(--bg-panel);border-right:2px solid var(--accent);}
+  .modal-body{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .modal-head{
+    padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+  }
+  .modal-head h2{margin:0;font-size:15px;}
+  .modal-head button{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;}
+  .modal-head button:hover{color:var(--danger);}
+  .modal-pane{flex:1;overflow-y:auto;padding:18px 22px;display:none;}
+  .modal-pane.active{display:block;}
+  .field-row{margin-bottom:16px;}
+  .field-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+  .field-row select, .field-row input[type=text]{
+    background:var(--bg-input);border:1px solid var(--border);color:var(--text);
+    padding:7px 9px;border-radius:4px;font-size:12.5px;width:260px;
+  }
+  .hint-box{
+    background:var(--bg-panel-alt);border:1px solid var(--border);border-radius:6px;padding:10px 12px;
+    font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-top:6px;
+  }
+  .kb-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .kb-table th{text-align:left;color:var(--text-muted);font-weight:500;font-size:11px;text-transform:uppercase;
+    letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--border);}
+  .kb-table td{padding:7px 8px;border-bottom:1px solid var(--bg-panel-alt);}
+  .kb-chip{
+    font-family:var(--mono-font);background:var(--bg-input);border:1px solid var(--border);
+    padding:3px 8px;border-radius:4px;font-size:11.5px;display:inline-block;min-width:90px;text-align:center;
+  }
+  .kb-chip.recording{border-color:var(--accent);color:var(--accent);animation:pulse 1s infinite;}
+  .kb-chip.conflict{border-color:var(--danger);color:var(--danger);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .kb-actions button{
+    background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;
+    padding:3px 8px;border-radius:4px;cursor:pointer;margin-left:5px;
+  }
+  .kb-actions button:hover{border-color:var(--accent);color:var(--accent);}
+  .reset-all{margin-top:14px;}
+  .reset-all button{
+    background:none;border:1px solid var(--border);color:var(--text-muted);font-size:12px;
+    padding:6px 12px;border-radius:5px;cursor:pointer;
+  }
+  .reset-all button:hover{border-color:var(--danger);color:var(--danger);}
+  .about-art pre{font-family:var(--mono-font);color:var(--accent);font-size:12.5px;line-height:1.25;}
+  .about-tag{font-family:var(--mono-font);color:var(--text-muted);font-size:12px;margin-top:2px;}
+  .about-desc{font-size:12.5px;color:var(--text-muted);line-height:1.6;margin-top:14px;max-width:440px;}
+  .theme-swatches{display:flex;gap:10px;margin-top:4px;}
+  .swatch{
+    width:70px;height:46px;border-radius:6px;border:2px solid var(--border);cursor:pointer;
+    display:flex;align-items:flex-end;padding:5px;font-size:9px;font-family:var(--mono-font);
+  }
+  .swatch.selected{border-color:var(--accent);}
+  .sw-dark{background:#1b1e24;color:#dfe3ea;}
+  .sw-light{background:#eef0f3;color:#20242b;}
+  .sw-contrast{background:#000;color:#ffcc00;}
+</style>
+</head>
+<body data-theme="waggo-dark">
+
+<!-- ================= SPLASH ================= -->
+<div id="splash">
+<pre>__      ____ _  __ _  __ _  ___  
+\ \ /\ / / _` |/ _` |/ _` |/ _ \ 
+ \ V  V / (_| | (_| | (_| | (_) |
+  \_/\_/ \__,_|\__, |\__, |\___/ 
+               |___/ |___/       </pre>
+  <div class="status-line" id="splashStatus">Booting…</div>
+  <div class="bar"><div class="bar-fill" id="splashBar"></div></div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+
+  <div class="titlebar">
+    <span class="brand">WAGGO</span>
+    <span class="sep">—</span>
+    <span class="doc-name" id="titleDocName">untitled.html</span>
+    <span class="dirty-dot" id="dirtyDot"></span>
+    <div class="tb-spacer"></div>
+    <span id="osLabel"></span>
+  </div>
+
+  <nav class="menubar" id="menubar">
+    <div class="menu" data-menu="file">
+      <button>File</button>
+      <div class="menu-drop">
+        <button class="menu-item" data-cmd="newFile"><span>New File</span><span class="kbd" data-kbd="newFile"></span></button>
+        <button class="menu-item" data-cmd="openFile"><span>Open…</span><span class="kbd"></span></button>
+        <button class="menu-item" data-cmd="saveFile"><span>Save As…</span><span class="kbd" data-kbd="saveFile"></span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-cmd="closeTab"><span>Close Tab</span><span class="kbd" data-kbd="closeTab"></span></button>
+      </div>
+    </div>
+    <div class="menu" data-menu="edit">
+      <button>Edit</button>
+      <div class="menu-drop">
+        <button class="menu-item" data-cmd="undo"><span>Undo</span><span class="kbd">Mod+Z</span></button>
+        <button class="menu-item" data-cmd="redo"><span>Redo</span><span class="kbd">Mod+Y</span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-cmd="cut"><span>Cut</span><span class="kbd">Mod+X</span></button>
+        <button class="menu-item" data-cmd="copy"><span>Copy</span><span class="kbd">Mod+C</span></button>
+        <button class="menu-item" data-cmd="paste"><span>Paste</span><span class="kbd">Mod+V</span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-cmd="find"><span>Find</span><span class="kbd">Mod+F</span></button>
+        <button class="menu-item" data-cmd="selectAll"><span>Select All</span><span class="kbd">Mod+A</span></button>
+      </div>
+    </div>
+    <div class="menu" data-menu="view">
+      <button>View</button>
+      <div class="menu-drop">
+        <button class="menu-item" data-cmd="toggleSidebar"><span>Toggle Sidebar</span><span class="kbd" data-kbd="toggleSidebar"></span></button>
+        <button class="menu-item" data-cmd="togglePreview"><span>Toggle Preview</span><span class="kbd" data-kbd="togglePreview"></span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-cmd="zoomIn"><span>Zoom In</span><span class="kbd" data-kbd="zoomIn"></span></button>
+        <button class="menu-item" data-cmd="zoomOut"><span>Zoom Out</span><span class="kbd" data-kbd="zoomOut"></span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" data-cmd="cycleTheme"><span>Cycle Theme</span><span class="kbd" data-kbd="cycleTheme"></span></button>
+      </div>
+    </div>
+    <div class="menu" data-menu="settings">
+      <button>Settings</button>
+      <div class="menu-drop">
+        <button class="menu-item" data-cmd="openGeneral"><span>Preferences…</span><span class="kbd" data-kbd="openSettings"></span></button>
+        <button class="menu-item" data-cmd="openShortcuts"><span>Keyboard Shortcuts…</span><span class="kbd" data-kbd="openShortcuts"></span></button>
+      </div>
+    </div>
+    <div class="menu" data-menu="help">
+      <button>Help</button>
+      <div class="menu-drop">
+        <button class="menu-item" data-cmd="openPalette"><span>Command Search</span><span class="kbd">Alt+Space</span></button>
+        <button class="menu-item" data-cmd="openAbout"><span>About Waggo</span><span class="kbd"></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="toolbar">
+    <select class="tb-select" id="langSelect" title="Language"></select>
+    <select class="tb-select" id="themeSelect" title="Theme">
+      <option value="waggo-dark">Waggo Dark</option>
+      <option value="waggo-light">Waggo Light</option>
+      <option value="waggo-contrast">Waggo Contrast</option>
+    </select>
+    <button class="tb-btn primary" id="runBtn" disabled>▶ Run</button>
+    <button class="tb-btn" id="previewToggleBtn">⬒ Preview</button>
+    <button class="tb-btn" id="sidebarToggleBtn">▤ Sidebar</button>
+    <div class="tb-spacer"></div>
+    <div class="tb-search" id="paletteOpenBtn">
+      <span>🔍</span><span>Search commands, files, settings…</span><span class="kbd-chip">Alt+Space</span>
+    </div>
+    <button class="tb-btn" id="settingsBtn" title="Settings">⚙</button>
+  </div>
+
+  <div class="body-area">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span>Open Documents</span>
+        <button id="newFileBtn" title="New File">＋</button>
+      </div>
+      <ul class="doc-list" id="docList"></ul>
+    </aside>
+
+    <div class="editor-preview-wrap">
+      <div class="editor-wrap">
+        <div id="monaco-container"></div>
+        <div class="watermark" id="watermark">
+          <pre>__      ____ _  __ _  __ _  ___  
+\ \ /\ / / _` |/ _` |/ _` |/ _ \ 
+ \ V  V / (_| | (_| | (_| | (_) |
+  \_/\_/ \__,_|\__, |\__, |\___/ 
+               |___/ |___/       </pre>
+          <div class="tag">----*code be freely*-----</div>
+        </div>
+      </div>
+      <div class="preview-wrap" id="previewWrap">
+        <div class="preview-bar">
+          <span>Preview</span>
+          <div>
+            <button id="refreshPreviewBtn" title="Refresh">⟳</button>
+            <button id="closePreviewBtn" title="Close">✕</button>
+          </div>
+        </div>
+        <iframe id="previewFrame" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span id="statCursor">Ln 1, Col 1</span>
+    <span id="statSel"></span>
+    <span class="grow"></span>
+    <span class="hint">Alt+Space — command search</span>
+    <span id="statLang">HTML</span>
+    <span id="statTheme">Waggo Dark</span>
+    <span>UTF-8</span>
+  </div>
+</div>
+
+<!-- ================= COMMAND PALETTE ================= -->
+<div class="overlay" id="paletteOverlay">
+  <div class="palette">
+    <input id="paletteInput" type="text" placeholder="Type a command, language, theme…" autocomplete="off" spellcheck="false" />
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<!-- ================= SETTINGS / SHORTCUTS / ABOUT MODAL ================= -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-nav">
+      <button class="active" data-pane="general">General</button>
+      <button data-pane="shortcuts">Keyboard Shortcuts</button>
+      <button data-pane="about">About</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-head">
+        <h2 id="modalTitle">General</h2>
+        <button id="closeSettingsBtn">✕</button>
+      </div>
+
+      <div class="modal-pane active" data-pane="general">
+        <div class="field-row">
+          <label>Theme</label>
+          <div class="theme-swatches">
+            <div class="swatch sw-dark" data-theme="waggo-dark">Dark</div>
+            <div class="swatch sw-light" data-theme="waggo-light">Light</div>
+            <div class="swatch sw-contrast" data-theme="waggo-contrast">Contrast</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Operating system detected</label>
+          <div class="hint-box" id="osHintBox"></div>
+        </div>
+        <div class="hint-box">
+          Waggo never overrides your browser's own shortcuts (new tab, close tab, switch tab, etc).
+          All custom Waggo commands use a dedicated modifier combination so they stay out of Chromium's
+          and Firefox's way.
+        </div>
+      </div>
+
+      <div class="modal-pane" data-pane="shortcuts">
+        <table class="kb-table">
+          <thead><tr><th>Command</th><th>Shortcut</th><th></th></tr></thead>
+          <tbody id="kbTableBody"></tbody>
+        </table>
+        <div class="reset-all"><button id="resetAllShortcutsBtn">Reset all to defaults</button></div>
+      </div>
+
+      <div class="modal-pane" data-pane="about">
+        <div class="about-art">
+<pre>__      ____ _  __ _  __ _  ___  
+\ \ /\ / / _` |/ _` |/ _` |/ _ \ 
+ \ V  V / (_| | (_| | (_| | (_) |
+  \_/\_/ \__,_|\__, |\__, |\___/ 
+               |___/ |___/       </pre>
+        </div>
+        <div class="about-tag">----*code be freely*-----</div>
+        <div class="about-desc">
+          Waggo is a Kate‑style code editor for the browser, built on the Monaco Editor.
+          Syntax highlighting is available for every language Monaco supports; HTML documents
+          can be executed and previewed directly in the editor. Every keyboard shortcut is
+          fully remappable from the Keyboard Shortcuts panel.<br><br>
+          Version 0.1.0
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     0. OS DETECTION
+  ============================================================ */
+  function detectOS(){
+    var uaData = navigator.userAgentData;
+    var platform = (uaData && uaData.platform) || navigator.platform || navigator.userAgent || "";
+    platform = platform.toLowerCase();
+    if(platform.indexOf("mac")>-1) return "mac";
+    if(platform.indexOf("win")>-1) return "windows";
+    return "linux";
+  }
+  var OS = detectOS();
+  var MOD = OS === "mac" ? "Cmd" : "Ctrl";
+  var MOD_DISPLAY = OS === "mac" ? "⌘" : "Ctrl";
+  var ALT_DISPLAY = OS === "mac" ? "⌥" : "Alt";
+
+  function fmtCombo(combo){
+    if(!combo) return "—";
+    return combo.split("+").map(function(p){
+      if(p==="Mod") return MOD_DISPLAY;
+      if(p==="Alt") return ALT_DISPLAY;
+      if(p==="Shift") return OS==="mac" ? "⇧" : "Shift";
+      return p;
+    }).join(OS==="mac" ? "" : "+");
+  }
+
+  /* ============================================================
+     1. STORAGE (persistent, best-effort)
+  ============================================================ */
+  var storageOK = !!(window.storage && window.storage.get);
+  function saveState(key, value){
+    if(!storageOK) return;
+    try{ window.storage.set(key, JSON.stringify(value), false).catch(function(){}); }catch(e){}
+  }
+  function loadState(key){
+    if(!storageOK) return Promise.resolve(null);
+    return window.storage.get(key, false).then(function(r){
+      return r ? JSON.parse(r.value) : null;
+    }).catch(function(){ return null; });
+  }
+
+  /* ============================================================
+     2. COMMAND REGISTRY + KEYMAP
+  ============================================================ */
+  var DEFAULT_KEYS = {
+    openPalette:    "Alt+Space",
+    newFile:        "Mod+Alt+N",
+    closeTab:       "Mod+Alt+W",
+    saveFile:       "Mod+Alt+S",
+    runCode:        "Mod+Alt+Enter",
+    togglePreview:  "Mod+Alt+P",
+    toggleSidebar:  "Mod+Alt+B",
+    nextTab:        "Mod+Alt+]",
+    prevTab:        "Mod+Alt+[",
+    openSettings:   "Mod+Alt+,",
+    openShortcuts:  "Mod+Alt+K",
+    cycleTheme:     "Mod+Alt+T",
+    zoomIn:         "Mod+Alt+=",
+    zoomOut:        "Mod+Alt+-"
+  };
+  var COMMAND_LABELS = {
+    openPalette:   "Open Command Search",
+    newFile:       "New File",
+    closeTab:      "Close Current Tab",
+    saveFile:      "Save As (download)",
+    runCode:       "Run HTML",
+    togglePreview: "Toggle Preview Pane",
+    toggleSidebar: "Toggle Sidebar",
+    nextTab:       "Next Tab",
+    prevTab:       "Previous Tab",
+    openSettings:  "Open Preferences",
+    openShortcuts: "Open Keyboard Shortcuts",
+    cycleTheme:    "Cycle Theme",
+    zoomIn:        "Zoom In Editor Font",
+    zoomOut:       "Zoom Out Editor Font"
+  };
+  var keymap = Object.assign({}, DEFAULT_KEYS); // id -> combo string
+  var commandActions = {}; // id -> fn, filled in later
+
+  function comboFromEvent(e){
+    var parts = [];
+    var mod = OS==="mac" ? e.metaKey : e.ctrlKey;
+    if(mod) parts.push("Mod");
+    if(e.altKey) parts.push("Alt");
+    if(e.shiftKey) parts.push("Shift");
+    var key = e.key;
+    if(["Control","Alt","Shift","Meta"].indexOf(key)>-1) return null;
+    if(key===" ") key = "Space";
+    if(key.length===1) key = key.toUpperCase();
+    parts.push(key);
+    return parts.join("+");
+  }
+
+  function reverseKeymap(){
+    var m = {};
+    Object.keys(keymap).forEach(function(id){ if(keymap[id]) m[keymap[id]] = id; });
+    return m;
+  }
+
+  window.addEventListener("keydown", function(e){
+    if(recordingId) return; // handled separately
+    var combo = comboFromEvent(e);
+    if(!combo) return;
+    var rev = reverseKeymap();
+    var id = rev[combo];
+    if(id && commandActions[id]){
+      e.preventDefault();
+      e.stopPropagation();
+      commandActions[id]();
+    }
+  }, true);
+
+  /* ============================================================
+     3. MONACO THEMES
+  ============================================================ */
+  function defineMonacoThemes(monaco){
+    monaco.editor.defineTheme("waggoDark", {
+      base:"vs-dark", inherit:true,
+      rules:[
+        {token:"comment", foreground:"6b7280", fontStyle:"italic"},
+        {token:"keyword", foreground:"4fb2e8"},
+        {token:"string", foreground:"9fd88a"},
+        {token:"number", foreground:"e0a15c"},
+        {token:"type", foreground:"7de0c8"},
+        {token:"tag", foreground:"4fb2e8"},
+        {token:"attribute.name", foreground:"e0a15c"}
+      ],
+      colors:{
+        "editor.background":"#1b1e24",
+        "editor.foreground":"#dfe3ea",
+        "editor.lineHighlightBackground":"#22262e",
+        "editorLineNumber.foreground":"#4a5060",
+        "editorCursor.foreground":"#4fb2e8",
+        "editor.selectionBackground":"#2c4a63"
+      }
+    });
+    monaco.editor.defineTheme("waggoLight", {
+      base:"vs", inherit:true,
+      rules:[
+        {token:"comment", foreground:"6b7280", fontStyle:"italic"},
+        {token:"keyword", foreground:"1c5fa8"},
+        {token:"string", foreground:"2e7d32"},
+        {token:"number", foreground:"b5651d"},
+        {token:"type", foreground:"0e7c66"},
+        {token:"tag", foreground:"1c5fa8"}
+      ],
+      colors:{
+        "editor.background":"#ffffff",
+        "editor.foreground":"#20242b",
+        "editor.lineHighlightBackground":"#f1f3f5",
+        "editorLineNumber.foreground":"#a5abb3",
+        "editorCursor.foreground":"#256fb8",
+        "editor.selectionBackground":"#cfe3f7"
+      }
+    });
+    monaco.editor.defineTheme("waggoContrast", {
+      base:"hc-black", inherit:true,
+      rules:[
+        {token:"comment", foreground:"9a9a9a", fontStyle:"italic"},
+        {token:"keyword", foreground:"ffcc00"},
+        {token:"string", foreground:"55ff9a"}
+      ],
+      colors:{
+        "editor.background":"#000000",
+        "editor.foreground":"#ffffff",
+        "editorCursor.foreground":"#ffcc00"
+      }
+    });
+  }
+  var THEME_TO_MONACO = { "waggo-dark":"waggoDark", "waggo-light":"waggoLight", "waggo-contrast":"waggoContrast" };
+  var THEME_LABELS = { "waggo-dark":"Waggo Dark", "waggo-light":"Waggo Light", "waggo-contrast":"Waggo Contrast" };
+  var THEME_ORDER = ["waggo-dark","waggo-light","waggo-contrast"];
+
+  /* ============================================================
+     4. LANGUAGES
+  ============================================================ */
+  var LANGUAGES = [
+    ["html","HTML"], ["css","CSS"], ["javascript","JavaScript"], ["typescript","TypeScript"],
+    ["json","JSON"], ["python","Python"], ["java","Java"], ["c","C"], ["cpp","C++"],
+    ["csharp","C#"], ["go","Go"], ["rust","Rust"], ["php","PHP"], ["ruby","Ruby"],
+    ["markdown","Markdown"], ["yaml","YAML"], ["xml","XML"], ["sql","SQL"], ["shell","Shell"],
+    ["plaintext","Plain Text"]
+  ];
+  var LANG_EXT = { html:"html", css:"css", javascript:"js", typescript:"ts", json:"json",
+    python:"py", java:"java", c:"c", cpp:"cpp", csharp:"cs", go:"go", rust:"rs",
+    php:"php", ruby:"rb", markdown:"md", yaml:"yml", xml:"xml", sql:"sql", shell:"sh", plaintext:"txt" };
+
+  /* ============================================================
+     5. SPLASH SEQUENCE
+  ============================================================ */
+  var splashEl = document.getElementById("splash");
+  var splashStatus = document.getElementById("splashStatus");
+  var splashBar = document.getElementById("splashBar");
+  var splashSteps = [
+    ["Reticulating editor core…", 12],
+    ["Fetching Monaco engine…", 30],
+    ["Registering languages…", 55],
+    ["Applying Waggo themes…", 75],
+    ["Restoring your session…", 90],
+    ["Ready.", 100]
+  ];
+  var stepIdx = 0;
+  function nextSplashStep(cb){
+    if(stepIdx >= splashSteps.length){ if(cb) cb(); return; }
+    var s = splashSteps[stepIdx++];
+    splashStatus.textContent = s[0];
+    splashBar.style.width = s[1] + "%";
+    setTimeout(function(){ nextSplashStep(cb); }, 180);
+  }
+  function hideSplash(){
+    splashEl.classList.add("hide");
+    document.getElementById("app").classList.add("show");
+    setTimeout(function(){ splashEl.style.display="none"; }, 550);
+  }
+
+  /* ============================================================
+     6. APP STATE
+  ============================================================ */
+  var editor = null;
+  var monacoRef = null;
+  var tabs = [];        // {id,name,lang,model,viewState}
+  var activeTabId = null;
+  var previewOpen = false;
+  var sidebarOpen = true;
+  var currentTheme = "waggo-dark";
+  var fontSize = 14;
+  var tabCounter = 1;
+
+  var els = {
+    langSelect: document.getElementById("langSelect"),
+    themeSelect: document.getElementById("themeSelect"),
+    runBtn: document.getElementById("runBtn"),
+    previewToggleBtn: document.getElementById("previewToggleBtn"),
+    sidebarToggleBtn: document.getElementById("sidebarToggleBtn"),
+    sidebar: document.getElementById("sidebar"),
+    docList: document.getElementById("docList"),
+    watermark: document.getElementById("watermark"),
+    previewWrap: document.getElementById("previewWrap"),
+    previewFrame: document.getElementById("previewFrame"),
+    statCursor: document.getElementById("statCursor"),
+    statSel: document.getElementById("statSel"),
+    statLang: document.getElementById("statLang"),
+    statTheme: document.getElementById("statTheme"),
+    titleDocName: document.getElementById("titleDocName"),
+    osLabel: document.getElementById("osLabel")
+  };
+
+  els.osLabel.textContent = "OS: " + OS.charAt(0).toUpperCase()+OS.slice(1);
+  document.getElementById("osHintBox").textContent =
+    "Detected platform: " + OS + ". Default modifier for Waggo commands is " + MOD_DISPLAY + "+" + ALT_DISPLAY + ".";
+
+  LANGUAGES.forEach(function(l){
+    var o = document.createElement("option");
+    o.value = l[0]; o.textContent = l[1];
+    els.langSelect.appendChild(o);
+  });
+
+  /* ---------- tab helpers ---------- */
+  function activeTab(){ return tabs.find(function(t){ return t.id===activeTabId; }); }
+
+  function updateWatermark(){
+    var t = activeTab();
+    var empty = t && t.model.getValue().length===0;
+    els.watermark.classList.toggle("hidden", !empty);
+  }
+
+  function updateDirty(){
+    document.getElementById("dirtyDot").classList.toggle("on", false);
+  }
+
+  function renderDocList(){
+    els.docList.innerHTML = "";
+    tabs.forEach(function(t){
+      var li = document.createElement("li");
+      li.className = "doc-item" + (t.id===activeTabId ? " active" : "");
+      li.innerHTML = '<span class="fdot"></span><span class="name"></span><span class="close-x">✕</span>';
+      li.querySelector(".name").textContent = t.name;
+      li.addEventListener("click", function(e){
+        if(e.target.classList.contains("close-x")){ closeTabById(t.id); return; }
+        switchTab(t.id);
+      });
+      els.docList.appendChild(li);
+    });
+  }
+
+  function switchTab(id){
+    var t = tabs.find(function(x){ return x.id===id; });
+    if(!t) return;
+    if(activeTab() && editor) activeTab().viewState = editor.saveViewState();
+    activeTabId = id;
+    editor.setModel(t.model);
+    if(t.viewState) editor.restoreViewState(t.viewState);
+    editor.focus();
+    els.langSelect.value = t.lang;
+    els.titleDocName.textContent = t.name;
+    els.statLang.textContent = LANGUAGES.find(function(l){return l[0]===t.lang;})[1];
+    els.runBtn.disabled = t.lang !== "html";
+    updateWatermark();
+    renderDocList();
+    persistTabs();
+  }
+
+  function createTab(lang, content, name){
+    lang = lang || "html";
+    var id = "t" + (tabCounter++);
+    name = name || ("untitled" + (tabCounter-1) + "." + LANG_EXT[lang]);
+    var model = monacoRef.editor.createModel(content || "", lang);
+    model.onDidChangeContent(function(){
+      updateWatermark();
+      persistTabs();
+    });
+    var t = {id:id, name:name, lang:lang, model:model, viewState:null};
+    tabs.push(t);
+    switchTab(id);
+    return t;
+  }
+
+  function closeTabById(id){
+    var idx = tabs.findIndex(function(t){ return t.id===id; });
+    if(idx===-1) return;
+    var wasActive = id===activeTabId;
+    tabs[idx].model.dispose();
+    tabs.splice(idx,1);
+    if(tabs.length===0){ createTab("html","",undefined); return; }
+    if(wasActive) switchTab(tabs[Math.max(0,idx-1)].id);
+    else renderDocList();
+    persistTabs();
+  }
+
+  function persistTabs(){
+    saveState("waggo:tabs", {
+      activeTabId: activeTabId,
+      tabs: tabs.map(function(t){ return {id:t.id,name:t.name,lang:t.lang,content:t.model.getValue()}; })
+    });
+  }
+
+  /* ---------- theme ---------- */
+  function applyTheme(themeId){
+    currentTheme = themeId;
+    document.body.setAttribute("data-theme", themeId);
+    if(monacoRef) monacoRef.editor.setTheme(THEME_TO_MONACO[themeId]);
+    els.themeSelect.value = themeId;
+    els.statTheme.textContent = THEME_LABELS[themeId];
+    document.querySelectorAll(".swatch").forEach(function(s){
+      s.classList.toggle("selected", s.getAttribute("data-theme")===themeId);
+    });
+    saveState("waggo:settings", {theme:currentTheme, sidebarOpen:sidebarOpen, previewOpen:previewOpen, fontSize:fontSize});
+  }
+
+  /* ---------- preview / run ---------- */
+  function runPreview(){
+    var t = activeTab();
+    if(!t || t.lang !== "html") return;
+    els.previewFrame.srcdoc = t.model.getValue();
+    if(!previewOpen) togglePreview(true);
+  }
+  function togglePreview(force){
+    previewOpen = typeof force === "boolean" ? force : !previewOpen;
+    els.previewWrap.classList.toggle("show", previewOpen);
+    els.previewToggleBtn.classList.toggle("active", previewOpen);
+    if(editor) setTimeout(function(){ editor.layout(); }, 160);
+    saveState("waggo:settings", {theme:currentTheme, sidebarOpen:sidebarOpen, previewOpen:previewOpen, fontSize:fontSize});
+  }
+  function toggleSidebar(force){
+    sidebarOpen = typeof force === "boolean" ? force : !sidebarOpen;
+    els.sidebar.classList.toggle("collapsed", !sidebarOpen);
+    els.sidebarToggleBtn.classList.toggle("active", sidebarOpen);
+    if(editor) setTimeout(function(){ editor.layout(); }, 160);
+    saveState("waggo:settings", {theme:currentTheme, sidebarOpen:sidebarOpen, previewOpen:previewOpen, fontSize:fontSize});
+  }
+
+  /* ---------- misc actions ---------- */
+  function setFontSize(sz){
+    fontSize = Math.max(9, Math.min(32, sz));
+    if(editor) editor.updateOptions({fontSize:fontSize});
+    saveState("waggo:settings", {theme:currentTheme, sidebarOpen:sidebarOpen, previewOpen:previewOpen, fontSize:fontSize});
+  }
+  function downloadCurrent(){
+    var t = activeTab();
+    if(!t) return;
+    var blob = new Blob([t.model.getValue()], {type:"text/plain"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = t.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  function openLocalFile(){
+    var input = document.createElement("input");
+    input.type = "file";
+    input.addEventListener("change", function(){
+      var f = input.files[0];
+      if(!f) return;
+      var reader = new FileReader();
+      reader.onload = function(){
+        var ext = f.name.split(".").pop().toLowerCase();
+        var lang = Object.keys(LANG_EXT).find(function(k){ return LANG_EXT[k]===ext; }) || "plaintext";
+        createTab(lang, reader.result, f.name);
+      };
+      reader.readAsText(f);
+    });
+    input.click();
+  }
+
+  /* ============================================================
+     7. COMMAND ACTIONS
+  ============================================================ */
+  commandActions = {
+    openPalette: function(){ openPalette(); },
+    newFile: function(){ createTab("html","",undefined); },
+    closeTab: function(){ if(activeTabId) closeTabById(activeTabId); },
+    saveFile: function(){ downloadCurrent(); },
+    runCode: function(){ runPreview(); },
+    togglePreview: function(){ togglePreview(); },
+    toggleSidebar: function(){ toggleSidebar(); },
+    nextTab: function(){
+      var i = tabs.findIndex(function(t){return t.id===activeTabId;});
+      switchTab(tabs[(i+1)%tabs.length].id);
+    },
+    prevTab: function(){
+      var i = tabs.findIndex(function(t){return t.id===activeTabId;});
+      switchTab(tabs[(i-1+tabs.length)%tabs.length].id);
+    },
+    openSettings: function(){ openSettingsModal("general"); },
+    openShortcuts: function(){ openSettingsModal("shortcuts"); },
+    cycleTheme: function(){
+      var i = THEME_ORDER.indexOf(currentTheme);
+      applyTheme(THEME_ORDER[(i+1)%THEME_ORDER.length]);
+    },
+    zoomIn: function(){ setFontSize(fontSize+1); },
+    zoomOut: function(){ setFontSize(fontSize-1); }
+  };
+
+  /* ============================================================
+     8. MENUBAR WIRING
+  ============================================================ */
+  document.querySelectorAll(".menu").forEach(function(menu){
+    var btn = menu.querySelector("button");
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var wasOpen = menu.classList.contains("open");
+      document.querySelectorAll(".menu.open").forEach(function(m){ m.classList.remove("open"); });
+      if(!wasOpen) menu.classList.add("open");
+    });
+  });
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".menu.open").forEach(function(m){ m.classList.remove("open"); });
+  });
+
+  document.querySelectorAll(".menu-item[data-cmd]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var cmd = btn.getAttribute("data-cmd");
+      switch(cmd){
+        case "newFile": commandActions.newFile(); break;
+        case "openFile": openLocalFile(); break;
+        case "saveFile": commandActions.saveFile(); break;
+        case "closeTab": commandActions.closeTab(); break;
+        case "undo": editor.trigger("menu","undo"); break;
+        case "redo": editor.trigger("menu","redo"); break;
+        case "cut": editor.trigger("menu","editor.action.clipboardCutAction"); break;
+        case "copy": editor.trigger("menu","editor.action.clipboardCopyAction"); break;
+        case "paste": editor.trigger("menu","editor.action.clipboardPasteAction"); break;
+        case "find": editor.getAction("actions.find").run(); break;
+        case "selectAll": editor.trigger("menu","editor.action.selectAll"); break;
+        case "toggleSidebar": commandActions.toggleSidebar(); break;
+        case "togglePreview": commandActions.togglePreview(); break;
+        case "zoomIn": commandActions.zoomIn(); break;
+        case "zoomOut": commandActions.zoomOut(); break;
+        case "cycleTheme": commandActions.cycleTheme(); break;
+        case "openGeneral": commandActions.openSettings(); break;
+        case "openShortcuts": commandActions.openShortcuts(); break;
+        case "openPalette": commandActions.openPalette(); break;
+        case "openAbout": openSettingsModal("about"); break;
+      }
+    });
+  });
+
+  function refreshMenuKbdLabels(){
+    document.querySelectorAll("[data-kbd]").forEach(function(el){
+      var id = el.getAttribute("data-kbd");
+      el.textContent = fmtCombo(keymap[id]);
+    });
+  }
+
+  /* ============================================================
+     9. TOOLBAR WIRING
+  ============================================================ */
+  els.langSelect.addEventListener("change", function(){
+    var t = activeTab();
+    if(!t) return;
+    t.lang = els.langSelect.value;
+    monacoRef.editor.setModelLanguage(t.model, t.lang);
+    els.statLang.textContent = LANGUAGES.find(function(l){return l[0]===t.lang;})[1];
+    els.runBtn.disabled = t.lang !== "html";
+    var base = t.name.replace(/\.[^.]+$/, "");
+    t.name = base + "." + LANG_EXT[t.lang];
+    els.titleDocName.textContent = t.name;
+    renderDocList();
+    persistTabs();
+  });
+  els.themeSelect.addEventListener("change", function(){ applyTheme(els.themeSelect.value); });
+  els.runBtn.addEventListener("click", runPreview);
+  els.previewToggleBtn.addEventListener("click", function(){ togglePreview(); });
+  els.sidebarToggleBtn.addEventListener("click", function(){ toggleSidebar(); });
+  document.getElementById("newFileBtn").addEventListener("click", function(){ commandActions.newFile(); });
+  document.getElementById("refreshPreviewBtn").addEventListener("click", runPreview);
+  document.getElementById("closePreviewBtn").addEventListener("click", function(){ togglePreview(false); });
+  document.getElementById("paletteOpenBtn").addEventListener("click", openPalette);
+  document.getElementById("settingsBtn").addEventListener("click", function(){ openSettingsModal("general"); });
+
+  document.querySelectorAll(".swatch").forEach(function(s){
+    s.addEventListener("click", function(){ applyTheme(s.getAttribute("data-theme")); });
+  });
+
+  /* ============================================================
+     10. COMMAND PALETTE
+  ============================================================ */
+  var paletteOverlay = document.getElementById("paletteOverlay");
+  var paletteInput = document.getElementById("paletteInput");
+  var paletteList = document.getElementById("paletteList");
+  var paletteItems = [];
+  var paletteSel = 0;
+
+  function buildPaletteItems(){
+    var items = [];
+    Object.keys(COMMAND_LABELS).forEach(function(id){
+      items.push({cat:"Command", label:COMMAND_LABELS[id], kbd:fmtCombo(keymap[id]), run:commandActions[id]});
+    });
+    LANGUAGES.forEach(function(l){
+      items.push({cat:"Language", label:"Switch language: " + l[1], kbd:"", run:function(){
+        els.langSelect.value = l[0];
+        els.langSelect.dispatchEvent(new Event("change"));
+      }});
+    });
+    THEME_ORDER.forEach(function(id){
+      items.push({cat:"Theme", label:"Switch theme: " + THEME_LABELS[id], kbd:"", run:function(){ applyTheme(id); }});
+    });
+    tabs.forEach(function(t){
+      items.push({cat:"File", label:"Go to: " + t.name, kbd:"", run:function(){ switchTab(t.id); }});
+    });
+    return items;
+  }
+
+  function fuzzyMatch(q, text){
+    q = q.toLowerCase(); text = text.toLowerCase();
+    if(text.indexOf(q) > -1) return true;
+    var ti = 0;
+    for(var qi=0; qi<q.length; qi++){
+      ti = text.indexOf(q[qi], ti);
+      if(ti === -1) return false;
+      ti++;
+    }
+    return true;
+  }
+
+  function renderPalette(){
+    var q = paletteInput.value.trim();
+    var all = buildPaletteItems();
+    paletteItems = q ? all.filter(function(it){ return fuzzyMatch(q, it.label); }) : all.slice(0,30);
+    paletteSel = 0;
+    paletteList.innerHTML = "";
+    if(paletteItems.length===0){
+      paletteList.innerHTML = '<div class="palette-empty">No matching commands.</div>';
+      return;
+    }
+    paletteItems.forEach(function(it, i){
+      var row = document.createElement("div");
+      row.className = "palette-item" + (i===0 ? " sel" : "");
+      row.innerHTML = '<span><span class="cat"></span><span class="lbl"></span></span><span class="kbd"></span>';
+      row.querySelector(".cat").textContent = it.cat;
+      row.querySelector(".lbl").textContent = it.label;
+      row.querySelector(".kbd").textContent = it.kbd;
+      row.addEventListener("click", function(){ it.run(); closePalette(); });
+      paletteList.appendChild(row);
+    });
+  }
+  function highlightPalette(){
+    Array.from(paletteList.children).forEach(function(el,i){ el.classList.toggle("sel", i===paletteSel); });
+    var sel = paletteList.children[paletteSel];
+    if(sel) sel.scrollIntoView({block:"nearest"});
+  }
+  function openPalette(){
+    paletteOverlay.classList.add("show");
+    paletteInput.value = "";
+    renderPalette();
+    setTimeout(function(){ paletteInput.focus(); }, 10);
+  }
+  function closePalette(){ paletteOverlay.classList.remove("show"); }
+
+  paletteInput.addEventListener("input", renderPalette);
+  paletteInput.addEventListener("keydown", function(e){
+    if(e.key==="ArrowDown"){ e.preventDefault(); paletteSel=Math.min(paletteSel+1,paletteItems.length-1); highlightPalette(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); paletteSel=Math.max(paletteSel-1,0); highlightPalette(); }
+    else if(e.key==="Enter"){ e.preventDefault(); var it=paletteItems[paletteSel]; if(it){ it.run(); closePalette(); } }
+    else if(e.key==="Escape"){ closePalette(); }
+  });
+  paletteOverlay.addEventListener("click", function(e){ if(e.target===paletteOverlay) closePalette(); });
+
+  /* ============================================================
+     11. SETTINGS MODAL
+  ============================================================ */
+  var settingsOverlay = document.getElementById("settingsOverlay");
+  var recordingId = null;
+
+  function openSettingsModal(pane){
+    settingsOverlay.classList.add("show");
+    switchPane(pane || "general");
+  }
+  function closeSettingsModal(){
+    settingsOverlay.classList.remove("show");
+    recordingId = null;
+  }
+  function switchPane(pane){
+    document.querySelectorAll(".modal-nav button").forEach(function(b){
+      b.classList.toggle("active", b.getAttribute("data-pane")===pane);
+    });
+    document.querySelectorAll(".modal-pane").forEach(function(p){
+      p.classList.toggle("active", p.getAttribute("data-pane")===pane);
+    });
+    var titles = {general:"General", shortcuts:"Keyboard Shortcuts", about:"About"};
+    document.getElementById("modalTitle").textContent = titles[pane];
+    if(pane==="shortcuts") renderShortcutsTable();
+    if(pane==="general"){
+      document.querySelectorAll(".swatch").forEach(function(s){
+        s.classList.toggle("selected", s.getAttribute("data-theme")===currentTheme);
+      });
+    }
+  }
+  document.querySelectorAll(".modal-nav button").forEach(function(b){
+    b.addEventListener("click", function(){ switchPane(b.getAttribute("data-pane")); });
+  });
+  document.getElementById("closeSettingsBtn").addEventListener("click", closeSettingsModal);
+  settingsOverlay.addEventListener("click", function(e){ if(e.target===settingsOverlay) closeSettingsModal(); });
+
+  function renderShortcutsTable(){
+    var body = document.getElementById("kbTableBody");
+    body.innerHTML = "";
+    Object.keys(COMMAND_LABELS).forEach(function(id){
+      var tr = document.createElement("tr");
+      var tdLabel = document.createElement("td");
+      tdLabel.textContent = COMMAND_LABELS[id];
+      var tdChip = document.createElement("td");
+      var chip = document.createElement("span");
+      chip.className = "kb-chip";
+      chip.textContent = fmtCombo(keymap[id]);
+      chip.id = "chip-" + id;
+      tdChip.appendChild(chip);
+      var tdActions = document.createElement("td");
+      tdActions.className = "kb-actions";
+      var changeBtn = document.createElement("button");
+      changeBtn.textContent = "Change";
+      changeBtn.addEventListener("click", function(){ startRecording(id); });
+      var resetBtn = document.createElement("button");
+      resetBtn.textContent = "Reset";
+      resetBtn.addEventListener("click", function(){
+        keymap[id] = DEFAULT_KEYS[id];
+        saveState("waggo:keymap", keymap);
+        renderShortcutsTable(); refreshMenuKbdLabels();
+      });
+      tdActions.appendChild(changeBtn);
+      tdActions.appendChild(resetBtn);
+      tr.appendChild(tdLabel); tr.appendChild(tdChip); tr.appendChild(tdActions);
+      body.appendChild(tr);
+    });
+  }
+
+  function startRecording(id){
+    recordingId = id;
+    var chip = document.getElementById("chip-" + id);
+    chip.textContent = "Press keys… (Esc to cancel)";
+    chip.classList.add("recording");
+    function handler(e){
+      e.preventDefault(); e.stopPropagation();
+      if(e.key==="Escape"){
+        chip.textContent = fmtCombo(keymap[id]);
+        chip.classList.remove("recording");
+        recordingId = null;
+        window.removeEventListener("keydown", handler, true);
+        return;
+      }
+      var combo = comboFromEvent(e);
+      if(!combo) return;
+      var conflictId = Object.keys(keymap).find(function(k){ return k!==id && keymap[k]===combo; });
+      if(conflictId){ keymap[conflictId] = null; }
+      keymap[id] = combo;
+      saveState("waggo:keymap", keymap);
+      recordingId = null;
+      window.removeEventListener("keydown", handler, true);
+      renderShortcutsTable();
+      refreshMenuKbdLabels();
+    }
+    window.addEventListener("keydown", handler, true);
+  }
+
+  document.getElementById("resetAllShortcutsBtn").addEventListener("click", function(){
+    keymap = Object.assign({}, DEFAULT_KEYS);
+    saveState("waggo:keymap", keymap);
+    renderShortcutsTable();
+    refreshMenuKbdLabels();
+  });
+
+  /* ============================================================
+     12. BOOT SEQUENCE
+  ============================================================ */
+  window.MonacoEnvironment = {
+    getWorkerUrl: function(){
+      return "data:text/javascript;charset=utf-8," + encodeURIComponent(
+        "self.MonacoEnvironment={baseUrl:'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/'};" +
+        "importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/base/worker/workerMain.js');"
+      );
+    }
+  };
+
+  Promise.all([
+    loadState("waggo:keymap"),
+    loadState("waggo:settings"),
+    loadState("waggo:tabs")
+  ]).then(function(results){
+    var savedKeymap = results[0], savedSettings = results[1], savedTabs = results[2];
+    if(savedKeymap) keymap = Object.assign({}, DEFAULT_KEYS, savedKeymap);
+    if(savedSettings){
+      if(savedSettings.theme) currentTheme = savedSettings.theme;
+      if(typeof savedSettings.sidebarOpen === "boolean") sidebarOpen = savedSettings.sidebarOpen;
+      if(typeof savedSettings.previewOpen === "boolean") previewOpen = savedSettings.previewOpen;
+      if(savedSettings.fontSize) fontSize = savedSettings.fontSize;
+    }
+
+    nextSplashStep(function(){
+      require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs" } });
+      require(["vs/editor/editor.main"], function(){
+        monacoRef = monaco;
+        defineMonacoThemes(monaco);
+
+        editor = monaco.editor.create(document.getElementById("monaco-container"), {
+          value: "",
+          language: "html",
+          theme: THEME_TO_MONACO[currentTheme],
+          fontFamily: "JetBrains Mono, Consolas, Menlo, monospace",
+          fontSize: fontSize,
+          automaticLayout: true,
+          minimap: {enabled: true},
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          cursorBlinking: "smooth",
+          renderLineHighlight: "all"
+        });
+
+        editor.onDidChangeCursorPosition(function(e){
+          els.statCursor.textContent = "Ln " + e.position.lineNumber + ", Col " + e.position.column;
+          var sel = editor.getSelection();
+          var selectedLen = editor.getModel() ? editor.getModel().getValueInRange(sel).length : 0;
+          els.statSel.textContent = selectedLen>0 ? (selectedLen + " selected") : "";
+        });
+
+        if(savedTabs && savedTabs.tabs && savedTabs.tabs.length){
+          savedTabs.tabs.forEach(function(t){
+            var m = /^t(\d+)$/.exec(t.id);
+            if(m) tabCounter = Math.max(tabCounter, parseInt(m[1],10)+1);
+            createTab(t.lang, t.content, t.name);
+          });
+          switchTab(savedTabs.activeTabId && tabs.find(function(t){return t.id===savedTabs.activeTabId;}) ? savedTabs.activeTabId : tabs[0].id);
+        } else {
+          createTab("html", "", "untitled1.html");
+        }
+
+        applyTheme(currentTheme);
+        toggleSidebar(sidebarOpen);
+        if(previewOpen) togglePreview(true);
+        refreshMenuKbdLabels();
+
+        hideSplash();
+      });
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
