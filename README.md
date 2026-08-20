@@ -1,3 +1,5 @@
+[site](https://muskekk.github.io/waggo)
+
 # Waggo — Code Be Freely
 
 Waggo is a lightweight, browser-based code editor inspired by Kate and built with the Monaco Editor.
